@@ -8,4 +8,5 @@ resource "hcloud_server" "vm" {
   location    = var.location
   image       = var.image
   ssh_keys    = [data.hcloud_ssh_key.default.id]
+  user_data   = file("${path.module}/cloud-init.yaml")
 }
