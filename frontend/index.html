@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple App</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        max-width: 720px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .note-item {
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: #fcfcfc;
+      }
+      .note-meta {
+        font-size: 12px;
+        color: #555;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 80px;
+        margin-bottom: 8px;
+      }
+      button {
+        padding: 8px 14px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 2px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple Frontend</h1>
+    <p>API: <code id="api-url"></code></p>
+
+    <div class="card">
+      <h2>Create note</h2>
+      <textarea id="new-note-input" placeholder="Type note text..."></textarea>
+      <br />
+      <button id="create-btn">Create</button>
+      <p id="status"></p>
+    </div>
+
+    <div class="card">
+      <h2>All notes</h2>
+      <div id="notes-list">Loading...</div>
+    </div>
+
+    <script>
+      const apiBase = `http://${window.location.hostname}:5000`;
+      document.getElementById("api-url").textContent = apiBase;
+      const statusEl = document.getElementById("status");
+      const notesListEl = document.getElementById("notes-list");
+
+      function showStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? "#b00020" : "#1a7f37";
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function renderNotes(notes) {
+        if (!notes.length) {
+          notesListEl.innerHTML = "<p>No notes yet.</p>";
+          return;
+        }
+
+        notesListEl.innerHTML = notes
+          .map((note) => {
+            const createdAt = new Date(note.created_at).toLocaleString();
+            return `
+              <div class="note-item">
+                <div class="note-meta">#${note.id} - ${createdAt}</div>
+                <textarea id="note-text-${note.id}">${escapeHtml(note.text)}</textarea>
+                <button onclick="updateNote(${note.id})">Update</button>
+                <button onclick="deleteNote(${note.id})">Delete</button>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      async function loadNotes() {
+        try {
+          const res = await fetch(`${apiBase}/api/notes`);
+          if (!res.ok) throw new Error("Cannot load notes");
+          const notes = await res.json();
+          renderNotes(notes);
+        } catch (err) {
+          notesListEl.textContent = err.message;
+        }
+      }
+
+      async function createNote() {
+        const text = document.getElementById("new-note-input").value.trim();
+        if (!text) {
+          showStatus("Please enter text.", true);
+          return;
+        }
+
+        showStatus("Creating...");
+        try {
+          const res = await fetch(`${apiBase}/api/notes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+          if (!res.ok) throw new Error("Create failed");
+          showStatus("Created.");
+          document.getElementById("new-note-input").value = "";
+          loadNotes();
+        } catch (err) {
+          showStatus(err.message, true);
+        }
+      }
+
+      async function updateNote(noteId) {
+        const input = document.getElementById(`note-text-${noteId}`);
+        const text = input.value.trim();
+        if (!text) {
+          showStatus("Text cannot be empty.", true);
+          return;
+        }
+
+        showStatus(`Updating #${noteId}...`);
+        try {
+          const res = await fetch(`${apiBase}/api/notes/${noteId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+          if (!res.ok) throw new Error("Update failed");
+          showStatus(`Updated #${noteId}.`);
+          loadNotes();
+        } catch (err) {
+          showStatus(err.message, true);
+        }
+      }
+
+      async function deleteNote(noteId) {
+        showStatus(`Deleting #${noteId}...`);
+        try {
+          const res = await fetch(`${apiBase}/api/notes/${noteId}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) throw new Error("Delete failed");
+          showStatus(`Deleted #${noteId}.`);
+          loadNotes();
+        } catch (err) {
+          showStatus(err.message, true);
+        }
+      }
+
+      window.updateNote = updateNote;
+      window.deleteNote = deleteNote;
+      document.getElementById("create-btn").addEventListener("click", createNote);
+      loadNotes();
+    </script>
+  </body>
+</html>

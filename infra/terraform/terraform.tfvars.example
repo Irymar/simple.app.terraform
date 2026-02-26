@@ -1,0 +1,14 @@
+# Example values for local Terraform CLI runs.
+# Do not commit real secrets. For HCP Terraform, store tokens in Workspace Variables.
+
+# Optional when using local CLI only. Prefer HCP Terraform Workspace Variable or HCLOUD_TOKEN env var.
+# hcloud_token = "replace-with-your-hetzner-token"
+
+# Required (matches an existing SSH key name in Hetzner Cloud).
+ssh_key_name = "your-ssh-key-name"
+
+# Optional overrides (same as current defaults in variables.tf).
+# server_name = "tf-test-vm"
+# server_type = "cax11"
+# location    = "hel1"
+# image       = "ubuntu-22.04"
